@@ -6,6 +6,8 @@ the device in front of you when it can, and in the cloud when it can't.
 
 Built for **#BuildHybridAI 2026** with **Firebase AI Logic hybrid inference**.
 
+Live demo: https://abhinavshukla152005-beep.github.io/fieldnote-hybrid-ai/
+
 ## Why hybrid
 
 A field worker is often the person with the least reliable connection. Sending notes
