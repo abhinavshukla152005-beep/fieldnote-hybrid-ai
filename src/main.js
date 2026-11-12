@@ -107,21 +107,51 @@ const DEVICE_LABELS = {
   unavailable: ["on-device: not supported", ""],
 };
 
+let deviceState = "checking";
+
 function paintDevice(state) {
+  deviceState = state;
   const [label, cls] = DEVICE_LABELS[state] ?? ["on-device: checking", ""];
   deviceEl.textContent = label;
   deviceEl.className = `net ${cls}`.trim();
 }
 
+// A browser without the model installed can leave availability() pending
+// indefinitely, so don't let the chip sit on "checking" forever.
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
 async function inspectDevice() {
   if (typeof LanguageModel === "undefined") return paintDevice("unavailable");
   try {
-    paintDevice(await LanguageModel.availability());
-  } catch {
-    paintDevice("unavailable");
+    paintDevice(await withTimeout(LanguageModel.availability(), 4000));
+  } catch (err) {
+    paintDevice(err.message === "timeout" ? "downloadable" : "unavailable");
   }
 }
 inspectDevice();
+
+// A stalled model download would otherwise leave the UI on "Preparing…" forever,
+// so give up once the download stops reporting progress.
+async function runWithStallWatch(task, ms = 15000) {
+  let last = Date.now();
+  let abort;
+  const guard = new Promise((_, reject) => {
+    abort = reject;
+  });
+  const timer = setInterval(() => {
+    if (Date.now() - last > ms) abort(new Error("stalled"));
+  }, 1000);
+  try {
+    return await Promise.race([task(() => (last = Date.now())), guard]);
+  } finally {
+    clearInterval(timer);
+  }
+}
 
 async function prepareDevice() {
   if (deviceReady) return true;
@@ -129,9 +159,12 @@ async function prepareDevice() {
   setStatus("Preparing on-device model… first run may download it.");
   try {
     const model = buildModel("only_on_device");
-    await model.initializeDeviceModel((p) => {
-      setStatus(`Downloading on-device model… ${Math.round(p * 100)}%`);
-    });
+    await runWithStallWatch((onProgress) =>
+      model.initializeDeviceModel((p) => {
+        onProgress();
+        setStatus(`Downloading on-device model… ${Math.round(p * 100)}%`);
+      }),
+    );
     deviceReady = true;
     paintDevice("available");
     setStatus("On-device model ready.");
@@ -141,7 +174,9 @@ async function prepareDevice() {
     setStatus(
       needsGesture
         ? "Press “Enable on-device model” yourself — Chrome only starts the download from a real click."
-        : `On-device model unavailable: ${err.message}`,
+        : err.message === "stalled"
+          ? "The on-device model stopped responding — this browser probably doesn't have it. Falling back to cloud."
+          : `On-device model unavailable: ${err.message}`,
       true,
     );
     paintDevice("downloadable");
@@ -207,9 +242,22 @@ async function analyse() {
 
   try {
     if (mode !== "only_in_cloud" && mode !== "prefer_in_cloud" && !deviceReady) {
-      await prepareDevice();
+      const localModelUsable = deviceState === "available" || deviceState === "downloading";
+      if (localModelUsable) {
+        await prepareDevice();
+      } else if (mode === "only_on_device") {
+        resultEl.textContent = "Nothing available offline.";
+        setStatus(
+          "This browser can't run the on-device model yet — press “Enable on-device model” first, then try again.",
+          true,
+        );
+        return;
+      }
     }
-    const response = await buildModel(mode).generateContent(PROMPT(notes));
+    // Asking the SDK to prefer the device it could not initialise just stalls the
+    // request, so route to the cloud ourselves when no local model is usable.
+    const routedMode = mode === "prefer_on_device" && !deviceReady ? "prefer_in_cloud" : mode;
+    const response = await buildModel(routedMode).generateContent(PROMPT(notes));
     const ms = Math.round(performance.now() - started);
     renderRun({ text: readReply(response), source: response.response.inferenceSource, ms, mode });
     setStatus("Done.");
