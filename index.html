@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fieldnote — hybrid AI that keeps working offline</title>
+    <script type="module" crossorigin src="./assets/index-B4-SJbGS.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-H-PPaSDS.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="dot"></span>
+        <h1>Fieldnote</h1>
+      </div>
+      <p class="tagline">Notes in, actions out — on-device first, cloud only when it earns it.</p>
+      <div class="chips">
+        <div class="net" id="device">on-device: checking</div>
+        <div class="net" id="net">online</div>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel input-panel">
+        <label class="field-label" for="notes">Raw field notes</label>
+        <textarea id="notes" spellcheck="false">Visited the ward 4 water point with Priya. Pump handle is loose and the caretaker says it broke twice this month. Chlorine tablets ran out on Tuesday, no resupply date given. Two households near the school reported stomach illness since Thursday. The school's tank looks fine but the tap is dry. Need to call the district office about the resupply, and get maintenance to look at the handle within the week.</textarea>
+
+        <div class="row">
+          <button id="sample" class="ghost">Load sample</button>
+          <button id="enable" class="ghost" title="Downloads the on-device model once">Enable on-device model</button>
+        </div>
+
+        <label class="field-label" for="mode">Inference mode</label>
+        <select id="mode">
+          <option value="prefer_on_device" selected>Prefer on-device, fall back to cloud</option>
+          <option value="only_on_device">Only on-device (offline guarantee)</option>
+          <option value="prefer_in_cloud">Prefer cloud, fall back to on-device</option>
+          <option value="only_in_cloud">Only in cloud</option>
+        </select>
+
+        <button id="run" class="primary">Analyse notes</button>
+        <p class="status" id="status">Ready.</p>
+      </section>
+
+      <section class="panel output-panel">
+        <div class="output-head">
+          <h2>Result</h2>
+          <span class="badge" id="badge">no run yet</span>
+        </div>
+        <div class="meta" id="meta"></div>
+        <pre class="result" id="result">Nothing analysed yet. Press “Analyse notes”.</pre>
+
+        <h2 class="history-title">Engine history</h2>
+        <ul class="history" id="history"></ul>
+      </section>
+    </main>
+
+    <footer>
+      <span>Firebase AI Logic hybrid inference · Gemini Nano on-device, Gemini 3 Flash in the cloud</span>
+    </footer>
+
+  </body>
+</html>
