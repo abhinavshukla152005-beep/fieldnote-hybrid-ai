@@ -24,7 +24,7 @@ ACTIONS:
 RISKS:
 - one or two bullets
 
-Rules: under 130 words total, plain text, no markdown headings beyond the labels above, and never invent facts that are not in the notes.
+Rules: under 130 words total, plain text, no markdown headings beyond the labels above. Use only facts in the notes. If an action has no named owner write "unassigned"; if there is no deadline write "no date given". Never invent a name, a date or a number.
 
 NOTES:
 ${notes}`;
