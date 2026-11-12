@@ -33,6 +33,23 @@ if (import.meta.env.DEV) {
   self.FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_APPCHECK_DEBUG_TOKEN;
 }
 
+// The App Check SDK loads enterprise.js with `render=explicit`, which leaves the
+// site key unregistered so its execute(siteKey) call fails. Loading the script
+// with our key first registers it, and the SDK then reuses window.grecaptcha.
+async function registerRecaptchaKey() {
+  if (self.grecaptcha?.enterprise) return;
+  await new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = `https://www.google.com/recaptcha/enterprise.js?render=${APP_CHECK_SITE_KEY}`;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = resolve;
+    document.head.appendChild(script);
+  });
+}
+
+await registerRecaptchaKey();
+
 const app = initializeApp(firebaseConfig);
 initializeAppCheck(app, {
   provider: new ReCaptchaEnterpriseProvider(APP_CHECK_SITE_KEY),
